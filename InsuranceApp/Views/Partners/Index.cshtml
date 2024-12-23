@@ -1,0 +1,259 @@
+﻿@model IEnumerable<InsuranceApp.Models.Partner>
+
+@{
+    ViewData["Title"] = "Lista Partnera";
+}
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Ostali metatags, linkovi na CSS, JS, itd. -->
+</head>
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+    <button class="btn btn-primary mb-3" onclick="window.location.href='/Partners/Create'">Dodaj Partnera</button>
+
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>Partner Number</th>
+                <th>Partner Type</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="partnerListBody">
+            @foreach (var partner in Model)
+            {
+                <tr data-partner-id="@partner.Id" class="@(partner.Id == (int)ViewData["NewestPartnerId"] ? "new-partner" : "")" style="cursor: pointer;" onclick="showDetailsModal(@partner.Id)">
+                    <td>
+                        @(partner.TotalPolicies > 5 || partner.TotalAmount > 5000
+                            ? "*" + partner.FirstName + " " + partner.LastName
+                            : partner.FirstName + " " + partner.LastName)
+                    </td>
+                    <td>@partner.PartnerNumber</td>
+                    <td>@(partner.PartnerTypeId == 1 ? "Personal" : "Legal")</td>
+                    <td>@partner.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>
+                        <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); openPolicyDialog(@partner.Id);">Dodaj Policu</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal za unos police -->
+<div class="modal fade" id="policyModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Unos Detalja Police</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Zatvori">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="policyNumber">Broj Police:</label>
+                    <input type="text" class="form-control" id="policyNumber" placeholder="Unesite broj police" required>
+                    <div id="policyNumberError" class="text-danger mt-2" style="display: none;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="policyAmount">Iznos Police:</label>
+                    <input type="number" class="form-control" id="policyAmount" placeholder="Unesite iznos police" step="0.01" required>
+                    <div id="policyAmountError" class="text-danger mt-2" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Zatvori</button>
+                <button type="button" class="btn btn-primary" onclick="savePolicy()">Spremi Policu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal za detalje partnera -->
+<div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalji Partnera</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Ime:</strong> <span id="modalFullName"></span></p>
+                <p><strong>Adresa:</strong> <span id="modalAddress"></span></p>
+                <p><strong>Kreirao:</strong> <span id="modalCreatedBy"></span></p>
+                <p><strong>Vanjski kod:</strong> <span id="modalExternalCode"></span></p>
+                <p><strong>Spol:</strong> <span id="modalGender"></span></p>
+                <p><strong>Strani partner:</strong> <span id="modalIsForeign"></span></p>
+                <p><strong>OIB:</strong> <span id="modalCroatianPIN"></span></p>
+                <p><strong>Datum kreiranja:</strong> <span id="modalCreatedAt"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Zatvori</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showDetailsModal(partnerId) {
+        fetch(`/api/partners/${partnerId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('modalFullName').textContent = `${data.firstName} ${data.lastName}`;
+                document.getElementById('modalAddress').textContent = data.address || "N/A";
+                document.getElementById('modalCreatedBy').textContent = data.createByUser || "N/A";
+                document.getElementById('modalExternalCode').textContent = data.externalCode || "N/A";
+                document.getElementById('modalGender').textContent = data.gender || "N/A";
+                document.getElementById('modalIsForeign').textContent = data.isForeign ? "Yes" : "No";
+                document.getElementById('modalCroatianPIN').textContent = data.croatianPIN || "N/A";
+                document.getElementById('modalCreatedAt').textContent = new Date(data.createdAtUtc).toLocaleString();
+
+                $('#detailsModal').modal('show');
+            })
+            .catch(error => {
+                console.error("Greška:", error);
+                alert("Došlo je do pogreške pri dohvaćanju podataka.");
+            });
+    }
+
+    function openPolicyDialog(partnerId) {
+        document.getElementById('policyNumber').value = '';
+        document.getElementById('policyAmount').value = '';
+        document.getElementById('policyNumberError').style.display = 'none';
+        document.getElementById('policyAmountError').style.display = 'none';
+
+        window.selectedPartnerId = partnerId;
+        $('#policyModal').modal('show');
+    }
+
+    function addNewPartnerToList(partner) {
+        const existingRow = document.querySelector(`[data-partner-id='${partner.id}']`);
+
+        if (existingRow) {
+            // If the row already exists, update it
+            const partnerName = (partner.totalPolicies > 5 || partner.totalAmount > 5000)
+                ? "*" + partner.firstName + " " + partner.lastName
+                : partner.firstName + " " + partner.lastName;
+
+            existingRow.querySelector('td').textContent = partnerName;
+            existingRow.querySelector('td:nth-child(2)').textContent = partner.partnerNumber;
+            existingRow.querySelector('td:nth-child(3)').textContent = partner.partnerTypeId == 1 ? 'Personal' : 'Legal';
+            existingRow.querySelector('td:nth-child(4)').textContent = new Date(partner.createdAtUtc).toISOString().slice(0, 19).replace('T', ' ');
+        } else {
+            // If the row doesn't exist, create it
+            const newRow = document.createElement('tr');
+            newRow.dataset.partnerId = partner.id;
+            newRow.style.cursor = 'pointer';
+
+            const partnerName = (partner.totalPolicies > 5 || partner.totalAmount > 5000)
+                ? "*" + partner.firstName + " " + partner.lastName
+                : partner.firstName + " " + partner.lastName;
+
+            newRow.innerHTML = `
+                <td>${partnerName}</td>
+                <td>${partner.partnerNumber}</td>
+                <td>${partner.partnerTypeId == 1 ? 'Personal' : 'Legal'}</td>
+                <td>${new Date(partner.createdAtUtc).toISOString().slice(0, 19).replace('T', ' ')}</td>
+                <td>
+                    <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); openPolicyDialog(${partner.id});">Dodaj Policu</button>
+                </td>
+            `;
+
+            const tableBody = document.getElementById('partnerListBody');
+            tableBody.appendChild(newRow);
+        }
+    }
+
+    function savePolicy() {
+        const partnerId = window.selectedPartnerId;
+        const policyNumber = document.getElementById('policyNumber').value;
+        let policyAmount = document.getElementById('policyAmount').value;
+
+        // Validate policy amount
+        if (!policyAmount || policyAmount.trim() === '') {
+            displayValidationErrors({
+                PolicyAmount: ["Iznos police je obavezan."]
+            });
+            return;
+        }
+
+        // Format policy amount
+        policyAmount = policyAmount.replace(',', '.');
+        policyAmount = parseFloat(policyAmount);
+
+        if (isNaN(policyAmount) || policyAmount <= 0) {
+            displayValidationErrors({
+                PolicyAmount: ["Iznos mora biti veći od 0."]
+            });
+            return;
+        }
+
+        const policyData = {
+            partnerId: partnerId,
+            policyNumber: policyNumber,
+            policyAmount: policyAmount
+        };
+
+        fetch('/api/policies', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(policyData)
+        })
+            .then(response => {
+                if (response.ok) {
+                    refreshPartnersTable();
+                    $('#policyModal').modal('hide');  // Hide the modal
+                  
+                    return response.json();
+                } else {
+                    return response.json().then(data => {
+                        displayValidationErrors(data.errors);
+                        throw new Error("Greška pri unosu police");
+                    });
+                }
+            })
+           
+    }
+    function refreshPartnersTable() {
+        // Osvježavanje može biti izvršeno tako da se ponovo učita stranica ili se ažurira kroz AJAX
+        location.reload();  // Ponovno učitavanje stranice
+    }
+
+    function displayValidationErrors(errors) {
+        // Sakrij sve prethodne greške
+        document.getElementById('policyNumberError').style.display = 'none';
+        document.getElementById('policyAmountError').style.display = 'none';
+
+        // Provjeri greške i prikaži ih ispod odgovarajućih polja
+        if (errors.PolicyNumber) {
+            document.getElementById('policyNumberError').textContent = errors.PolicyNumber[0];  // Uzmi prvu grešku
+            document.getElementById('policyNumberError').style.display = 'block';
+        }
+
+        if (errors.PolicyAmount) {
+            document.getElementById('policyAmountError').textContent = errors.PolicyAmount[0];  // Uzmi prvu grešku
+            document.getElementById('policyAmountError').style.display = 'block';
+        }
+    }
+</script>
+
+<style>
+    .new-partner {
+        background-color: #f8f9fa; /* Light background for the new row */
+        font-weight: bold; /* Bold text */
+        transition: background-color 1s ease; /* Smooth transition */
+    }
+
+        .new-partner td {
+            font-weight: bold; /* Make text inside <td> bold */
+        }
+</style>

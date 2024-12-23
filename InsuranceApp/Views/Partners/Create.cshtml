@@ -1,0 +1,113 @@
+﻿@model InsuranceApp.Models.Partner
+
+@{
+    ViewData["Title"] = "Dodavanje Partnera";
+}
+
+
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Ostali metatags, linkovi na CSS, JS, itd. -->
+</head>
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+    <form asp-action="Create" method="post" id="partnerForm" class="needs-validation" novalidate>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="FirstName">Ime</label>
+                <input type="text" class="form-control" id="FirstName" name="FirstName" required minlength="2" maxlength="255">
+                <div class="invalid-feedback">Ime je obavezno (2-255 znakova).</div>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="LastName">Prezime</label>
+                <input type="text" class="form-control" id="LastName" name="LastName" required minlength="2" maxlength="255">
+                <div class="invalid-feedback">Prezime je obavezno (2-255 znakova).</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="Address">Adresa</label>
+            <input type="text" class="form-control" id="Address" name="Address">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="PartnerNumber">Broj partnera</label>
+                <input type="text" class="form-control" id="PartnerNumber" name="PartnerNumber" required pattern="^\d{20}$">
+                <div class="invalid-feedback">Broj partnera mora sadržavati točno 20 znamenki.</div>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="CroatianPIN">OIB</label>
+                <input type="text" class="form-control" id="CroatianPIN" name="CroatianPIN" pattern="^\d{11}$">
+                <div class="invalid-feedback">OIB mora sadržavati točno 11 znamenki.</div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="PartnerTypeId">Tip partnera</label>
+                <select class="form-control" id="PartnerTypeId" name="PartnerTypeId" required>
+                    <option value="">Odaberite...</option>
+                    <option value="1">Osobni</option>
+                    <option value="2">Pravni</option>
+                </select>
+                <div class="invalid-feedback">Tip partnera je obavezan.</div>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="CreateByUser">Kreirao</label>
+                <input type="email" class="form-control" id="CreateByUser" name="CreateByUser" required maxlength="255">
+                <div class="invalid-feedback">Ispravan email je obavezan.</div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="IsForeign">Strani partner</label>
+                <select class="form-control" id="IsForeign" name="IsForeign" required>
+                    <option value="true">Da</option>
+                    <option value="false">Ne</option>
+                </select>
+                <div class="invalid-feedback">Ova informacija je obavezna.</div>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="ExternalCode">Vanjski kod</label>
+                <input type="text" class="form-control" id="ExternalCode" name="ExternalCode" required minlength="10" maxlength="20">
+                <div class="invalid-feedback">Vanjski kod mora sadržavati između 10 i 20 znakova.</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="Gender">Spol</label>
+            <select class="form-control" id="Gender" name="Gender" required>
+                <option value="">Odaberite...</option>
+                <option value="M">Muški</option>
+                <option value="F">Ženski</option>
+                <option value="N">Ne-binarni</option>
+            </select>
+            <div class="invalid-feedback">Spol je obavezan.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Dodaj partnera</button>
+    </form>
+</div>
+
+<script>
+    // Bootstrap validacija
+    (function () {
+        'use strict';
+        window.addEventListener('load', function () {
+            var forms = document.getElementsByClassName('needs-validation');
+            Array.prototype.filter.call(forms, function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+</script>
